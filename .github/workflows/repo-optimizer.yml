@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: 🧪 فحص الوصول الكامل
+      - name: 🔐 فحص الوصول الكامل
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token $TARGET_TOKEN" \
@@ -74,18 +74,19 @@ jobs:
           cat > deepseek_prompt.txt << EOF
 SYSTEM:
 أنت مهندس برمجيات خارق.
-لديك صلاحية تعديل كل المستودع.
+لديك صلاحية تعديل كل المستودع بالكامل.
 
-SCOPE: ${{ github.event.inputs.improvement_scope }}
+SCOPE:
+${{ github.event.inputs.improvement_scope }}
 
 USER PROMPT:
 ${{ github.event.inputs.ai_prompt }}
 
 RULES:
-- عدّل الكود فعليًا
+- عدل الكود فعلياً
 - حسّن الجودة
 - لا تكسر المشروع
-- إنشئ commits واضحة
+- أنشئ commits واضحة
 EOF
 
           curl https://api.deepseek.com/v1/chat/completions \
@@ -99,8 +100,8 @@ EOF
       - name: ✍️ تطبيق التعديلات (Placeholder Engine)
         run: |
           cd target
-          echo "⚠️ هنا تربط محركك الخاص لتطبيق التعديلات من DeepSeek"
-          echo "مثال: parser → file patches → overwrite"
+          echo "⚠️ هنا يتم ربط محركك الخاص لتطبيق مخرجات DeepSeek"
+          echo "مثال: parser → diff → overwrite files"
 
       - name: 💾 Commit التعديلات
         run: |
@@ -124,12 +125,12 @@ EOF
               \"title\": \"🤖 Genesis Forge AI Optimization\",
               \"head\": \"genesis-forge-ai\",
               \"base\": \"main\",
-              \"body\": \"تم تعديل المستودع بالكامل عبر AI بناءً على البرومبت القادم من المنصة.\"
+              \"body\": \"تعديلات شاملة عبر AI بناءً على البرومبت القادم من المنصة.\"
             }"
 
       - name: ✅ الخلاصة
         run: |
           echo "🔥 Genesis Forge AI أنهى العمل بنجاح"
-          echo "🔐 صلاحيات كاملة"
+          echo "🔐 وصول كامل"
           echo "🧠 تعديل عبر برومبت"
           echo "📦 Commit + PR جاهزين"
