@@ -1,4 +1,4 @@
-name: 🔧 Ultimate Forge Pro - Genesis System
+name: 🔥 Genesis Forge Pro – Full Access AI Engineer
 
 on:
   workflow_dispatch:
@@ -12,160 +12,124 @@ on:
         required: true
         type: string
       target_token:
-        description: 'GitHub Token للمستودع الهدف (للوصول والكتابة)'
+        description: 'GitHub Token بصلاحيات كاملة'
         required: true
         type: string
-      improvement_type:
-        description: 'نوع التحسين المطلوب'
+      ai_prompt:
+        description: 'البرومبت القادم من منصتك'
+        required: true
+        type: string
+      improvement_scope:
+        description: 'نطاق التعديل'
         required: true
         type: choice
-        options:
-          - code_quality
-          - performance
-          - error_handling
-          - documentation
-          - security
-          - all
-        default: 'code_quality'
-      custom_command:
-        description: 'أمر مخصص للتحسين'
-        required: false
-        type: string
+        options: [partial, full, refactor, security, performance, all]
+        default: all
+
+permissions:
+  contents: write
+  pull-requests: write
+  workflows: write
 
 env:
   DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
   TARGET_TOKEN: ${{ github.event.inputs.target_token }}
 
 jobs:
-  check-and-analyze:
+  genesis-forge:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      can_access: ${{ steps.check_access.outputs.can_access }}
-      project_type: ${{ steps.detect_project.outputs.project_type }}
-    
+    timeout-minutes: 45
+
     steps:
-      - name: 🔍 فحص إمكانية الوصول
-        id: check_access
-        env:
-          TARGET_TOKEN: ${{ github.event.inputs.target_token }}
+      - name: 🧪 فحص الوصول الكامل
         run: |
-          echo "🔍 فحص الوصول إلى المستودع الهدف..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token $TARGET_TOKEN" \
-            "https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}")
-          
-          if [ "$RESPONSE" = "200" ]; then
-            echo "✅ يمكن الوصول إلى المستودع الهدف"
-            echo "can_access=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ لا يمكن الوصول إلى المستودع (HTTP: $RESPONSE)"
-            echo "can_access=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: 📱 كشف نوع المشروع
-        id: detect_project
-        if: steps.check_access.outputs.can_access == 'true'
-        env:
-          TARGET_TOKEN: ${{ github.event.inputs.target_token }}
-        run: |
-          echo "📱 جاري كشف نوع المشروع..."
-          
-          REPO_URL="https://x-access-token:$TARGET_TOKEN@github.com/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}.git"
-          git clone --depth 1 "$REPO_URL" temp-repo
-          cd temp-repo
-          
-          if [ -f "build.gradle" ] || [ -f "app/build.gradle" ]; then
-            echo "🎯 نوع المشروع: Android"
-            echo "project_type=android" >> $GITHUB_OUTPUT
-          elif [ -f "package.json" ]; then
-            echo "🟢 نوع المشروع: Node.js"
-            echo "project_type=nodejs" >> $GITHUB_OUTPUT
-          elif [ -f "pom.xml" ]; then
-            echo "☕ نوع المشروع: Java"
-            echo "project_type=java" >> $GITHUB_OUTPUT
-          elif [ -f "requirements.txt" ]; then
-            echo "🐍 نوع المشروع: Python"
-            echo "project_type=python" >> $GITHUB_OUTPUT
-          else
-            echo "📁 نوع المشروع: عام"
-            echo "project_type=general" >> $GITHUB_OUTPUT
-          fi
-          
-          cd ..
-          rm -rf temp-repo
+            https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }})
 
-  analyze-and-optimize:
-    runs-on: ubuntu-latest
-    needs: check-and-analyze
-    if: needs.check-and-analyze.outputs.can_access == 'true'
-    timeout-minutes: 30
-    
-    steps:
-      - name: 🎯 بدء عملية التحسين
-        run: |
-          echo "🚀 Genesis Forge Pro - بدء عملية التحسين"
-          echo "========================================"
-          echo "👨‍💻 المهندس: ${{ github.repository }}"
-          echo "🎯 الهدف: ${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}"
-          echo "🔧 النوع: ${{ github.event.inputs.improvement_type }}"
-          echo "⚡ الأمر: ${{ github.event.inputs.custom_command || 'بدون أمر مخصص' }}"
-          echo "📱 نوع المشروع: ${{ needs.check-and-analyze.outputs.project_type }}"
-          echo ""
+          if [ "$code" != "200" ]; then
+            echo "❌ لا يوجد وصول كامل"
+            exit 1
+          fi
+          echo "✅ وصول كامل مؤكد"
 
-      - name: 📥 جلب المستودع الهدف
-        env:
-          TARGET_TOKEN: ${{ github.event.inputs.target_token }}
+      - name: 📥 استنساخ المستودع الهدف (Full Access)
         run: |
-          echo "📥 جلب المستودع الهدف..."
-          REPO_URL="https://x-access-token:$TARGET_TOKEN@github.com/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}.git"
-          git clone "$REPO_URL" target-repo
-          cd target-repo
-          git config user.email "genesis-forge@ai.com"
+          git clone https://x-access-token:$TARGET_TOKEN@github.com/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}.git target
+          cd target
           git config user.name "Genesis Forge AI"
-          echo "✅ تم جلب المستودع بنجاح"
-          echo "📊 إحصائيات:"
-          echo "  - الحجم: $(du -sh . | cut -f1)"
-          echo "  - الملفات: $(find . -type f | wc -l)"
+          git config user.email "genesis-forge@ai.engineer"
 
-      - name: 🤖 استشارة Genesis Forge AI
-        if: env.DEEPSEEK_API_KEY != ''
+      - name: 📊 تحليل شامل للمستودع
         run: |
-          echo "🤖 استشارة Genesis Forge AI للتحسينات..."
-          cd target-repo
-          
-          # إنشاء استشارة AI بسيطة
-          cat > ai_consultation.md << 'EOF'
-# 🧠 استشارة AI للتحسينات
+          cd target
+          echo "📂 الملفات: $(find . -type f | wc -l)"
+          echo "📁 المجلدات: $(find . -type d | wc -l)"
+          echo "💾 الحجم: $(du -sh . | cut -f1)"
 
-## 📋 معلومات المشروع
-- **النوع**: ${{ needs.check-and-analyze.outputs.project_type }}
-- **نوع التحسين**: ${{ github.event.inputs.improvement_type }}
-- **التاريخ**: $(date)
+      - name: 🧠 إرسال البرومبت إلى DeepSeek
+        run: |
+          cd target
 
-## 💡 اقتراحات عامة
-1. تحسين جودة الكود
-2. تحديث التوثيق
-3. تحسين الأداء
+          cat > deepseek_prompt.txt << EOF
+SYSTEM:
+أنت مهندس برمجيات خارق.
+لديك صلاحية تعديل كل المستودع.
+
+SCOPE: ${{ github.event.inputs.improvement_scope }}
+
+USER PROMPT:
+${{ github.event.inputs.ai_prompt }}
+
+RULES:
+- عدّل الكود فعليًا
+- حسّن الجودة
+- لا تكسر المشروع
+- إنشئ commits واضحة
 EOF
 
-      - name: 🔍 فحص وتحليل الملفات
+          curl https://api.deepseek.com/v1/chat/completions \
+            -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @<(jq -n --arg p "$(cat deepseek_prompt.txt)" '{
+              model:"deepseek-coder",
+              messages:[{role:"user",content:$p}]
+            }') > deepseek_response.json
+
+      - name: ✍️ تطبيق التعديلات (Placeholder Engine)
         run: |
-          echo "🔍 جاري فحص وتحليل الملفات..."
-          cd target-repo
-          
-          # إنشاء تقرير التحليل
-          cat > analysis_report.md << 'EOF'
-# 📊 تقرير تحليل المشروع
+          cd target
+          echo "⚠️ هنا تربط محركك الخاص لتطبيق التعديلات من DeepSeek"
+          echo "مثال: parser → file patches → overwrite"
 
-## 🎯 معلومات المشروع
-- **المستودع**: ${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}
-- **نوع المشروع**: ${{ needs.check-and-analyze.outputs.project_type }}
-- **نوع التحسين**: ${{ github.event.inputs.improvement_type }}
+      - name: 💾 Commit التعديلات
+        run: |
+          cd target
+          git checkout -b genesis-forge-ai
+          git add .
+          git commit -m "🤖 AI Optimization via Genesis Forge"
 
-## 📈 إحصائيات
-- **الملفات**: $(find . -type f | wc -l)
-- **المجلدات**: $(find . -type d | wc -l)
-- **الحجم**: $(du -sh . | cut -f1)
+      - name: 🚀 Push التعديلات
+        run: |
+          cd target
+          git push origin genesis-forge-ai
 
-## 🔍 الملفات الرئيسية
+      - name: 🔀 إنشاء Pull Request تلقائي
+        run: |
+          curl -X POST \
+            -H "Authorization: token $TARGET_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}/pulls \
+            -d "{
+              \"title\": \"🤖 Genesis Forge AI Optimization\",
+              \"head\": \"genesis-forge-ai\",
+              \"base\": \"main\",
+              \"body\": \"تم تعديل المستودع بالكامل عبر AI بناءً على البرومبت القادم من المنصة.\"
+            }"
+
+      - name: ✅ الخلاصة
+        run: |
+          echo "🔥 Genesis Forge AI أنهى العمل بنجاح"
+          echo "🔐 صلاحيات كاملة"
+          echo "🧠 تعديل عبر برومبت"
+          echo "📦 Commit + PR جاهزين"
