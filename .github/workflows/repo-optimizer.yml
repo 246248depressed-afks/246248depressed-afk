@@ -11,10 +11,6 @@ on:
         description: 'اسم المستودع الهدف'
         required: true
         type: string
-      target_token:
-        description: 'GitHub Token بصلاحيات كاملة'
-        required: true
-        type: string
       ai_prompt:
         description: 'البرومبت القادم من منصتك'
         required: true
@@ -25,15 +21,18 @@ on:
         type: choice
         options: [partial, full, refactor, security, performance, all]
         default: all
+      base_branch:
+        description: 'الفرع الأساسي'
+        required: true
+        default: main
 
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 env:
   DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-  TARGET_TOKEN: ${{ github.event.inputs.target_token }}
+  TARGET_TOKEN: ${{ secrets.TARGET_TOKEN }}
 
 jobs:
   genesis-forge:
@@ -71,7 +70,7 @@ jobs:
         run: |
           cd target
 
-          cat > deepseek_prompt.txt << EOF
+          cat > deepseek_prompt.txt << 'EOF'
 SYSTEM:
 أنت مهندس برمجيات خارق.
 لديك صلاحية تعديل كل المستودع بالكامل.
@@ -97,6 +96,10 @@ EOF
               messages:[{role:"user",content:$p}]
             }') > deepseek_response.json
 
+      - name: 📜 عرض مخرجات DeepSeek
+        run: |
+          jq '.choices[0].message.content' deepseek_response.json || echo "⚠️ لا توجد مخرجات واضحة"
+
       - name: ✍️ تطبيق التعديلات (Placeholder Engine)
         run: |
           cd target
@@ -106,9 +109,13 @@ EOF
       - name: 💾 Commit التعديلات
         run: |
           cd target
-          git checkout -b genesis-forge-ai
+          git checkout -b genesis-forge-ai || git checkout genesis-forge-ai
           git add .
-          git commit -m "🤖 AI Optimization via Genesis Forge"
+          if ! git diff --cached --quiet; then
+            git commit -m "🤖 AI Optimization via Genesis Forge"
+          else
+            echo "⚠️ لا توجد تغييرات لتطبيقها"
+          fi
 
       - name: 🚀 Push التعديلات
         run: |
@@ -124,7 +131,7 @@ EOF
             -d "{
               \"title\": \"🤖 Genesis Forge AI Optimization\",
               \"head\": \"genesis-forge-ai\",
-              \"base\": \"main\",
+              \"base\": \"${{ github.event.inputs.base_branch }}\",
               \"body\": \"تعديلات شاملة عبر AI بناءً على البرومبت القادم من المنصة.\"
             }"
 
