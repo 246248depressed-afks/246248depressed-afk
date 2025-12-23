@@ -41,11 +41,12 @@ jobs:
 
     steps:
       - name: 🔐 فحص الوصول الكامل
+        shell: bash
         run: |
+          set -euo pipefail
           code=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token $TARGET_TOKEN" \
-            https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }})
-
+            -H "Authorization: token ${{ env.TARGET_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}")
           if [ "$code" != "200" ]; then
             echo "❌ لا يوجد وصول كامل إلى المستودع الهدف. رمز الحالة: $code"
             exit 1
@@ -53,72 +54,100 @@ jobs:
           echo "✅ وصول كامل مؤكد"
 
       - name: 📥 استنساخ المستودع الهدف (Full Access)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}
           token: ${{ env.TARGET_TOKEN }}
-          path: 'target' # استنساخ المستودع في مجلد اسمه target
+          path: target
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.base_branch }}
 
       - name: ⚙️ إعداد هوية Git
+        shell: bash
         run: |
+          set -euo pipefail
           cd target
           git config user.name "Genesis Forge AI"
           git config user.email "genesis-forge@ai.engineer"
 
       - name: 📊 تحليل شامل للمستودع
+        shell: bash
         run: |
+          set -euo pipefail
           cd target
           echo "📂 الملفات: $(find . -type f | wc -l)"
           echo "📁 المجلدات: $(find . -type d | wc -l)"
           echo "💾 الحجم: $(du -sh . | cut -f1)"
 
       - name: 🧠 إرسال البرومبت إلى DeepSeek (معطل مؤقتاً للاختبار)
+        shell: bash
         run: |
+          set -euo pipefail
           echo "Skipping DeepSeek call for this test run."
-          # يمكنك إعادة تفعيل هذه الخطوة لاحقاً
-          # ... (كود curl الأصلي) ...
 
-      # =================================================================
-      # ✍️ هذه هي الخطوة الجديدة والمبسطة لتطبيق التعديلات (للاختبار)
-      # =================================================================
       - name: ✍️ تطبيق تعديل بسيط (للاختبار)
+        shell: bash
         run: |
+          set -euo pipefail
           cd target
           echo "Hello from Genesis Forge AI - $(date)" >> README.md
           echo "Test modification applied."
 
-      - name: 💾 Commit التعديلات
+      - name: 💾 Commit, Push, and Create PR
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.event.inputs.base_branch }}
+          AI_PROMPT: ${{ github.event.inputs.ai_prompt }}
+          OWNER: ${{ github.event.inputs.target_owner }}
+          REPO: ${{ github.event.inputs.target_repo }}
         run: |
+          set -euo pipefail
           cd target
+
+          # تأكد من تتبع الفرع الأساسي
+          git fetch origin "$BASE_BRANCH"
+          git checkout -B "$BASE_BRANCH" "origin/$BASE_BRANCH"
+
           BRANCH_NAME="genesis-forge-ai-$(date +%s)"
-          git checkout -b $BRANCH_NAME
-          git add .
+          git checkout -b "$BRANCH_NAME"
+
+          # إضافة كل التغييرات
+          git add -A
+
+          # التحقق إن كانت هناك تغييرات فعلية قبل الـ commit
           if ! git diff --cached --quiet; then
             echo "توجد تغييرات، سيتم عمل commit."
             git commit -m "🤖 AI Test Optimization via Genesis Forge"
-            # 🚀 Push التعديلات
-            git push origin $BRANCH_NAME
-            # 🔀 إنشاء Pull Request تلقائي
-            curl -X POST \
+
+            echo "Pushing changes to new branch: $BRANCH_NAME"
+            git push origin "$BRANCH_NAME"
+
+            echo "Creating Pull Request..."
+
+            # توليد JSON سليم للـ PR دون أخطاء heredoc
+            PR_TITLE="🤖 Genesis Forge AI Test (${{ github.run_id }})"
+            PR_BODY="تعديل اختباري تلقائي عبر AI بناءً على البرومبت:\n\n> ${AI_PROMPT}"
+
+            JSON_PAYLOAD=$(printf '%s' \
+              "$(jq -n --arg title "$PR_TITLE" \
+                       --arg head "$BRANCH_NAME" \
+                       --arg base "$BASE_BRANCH" \
+                       --arg body "$PR_BODY" \
+                       '{title: $title, head: $head, base: $base, body: $body}')" )
+
+            curl -f -X POST \
               -H "Authorization: token ${{ env.TARGET_TOKEN }}" \
               -H "Accept: application/vnd.github+json" \
-              https://api.github.com/repos/${{ github.event.inputs.target_owner }}/${{ github.event.inputs.target_repo }}/pulls \
-              -d @- <<EOF
-              {
-                "title": "🤖 Genesis Forge AI Test (${{ github.run_id }})",
-                "head": "$BRANCH_NAME",
-                "base": "${{ github.event.inputs.base_branch }}",
-                "body": "تعديل اختباري تلقائي عبر AI بناءً على البرومبت:\n\n> ${{ github.event.inputs.ai_prompt }}"
-              }
-EOF
+              -d "$JSON_PAYLOAD" \
+              "https://api.github.com/repos/${OWNER}/${REPO}/pulls"
+
+            echo "✅ تم إنشاء الـ Pull Request بنجاح."
           else
             echo "⚠️ لا توجد تغييرات لتطبيقها."
           fi
 
       - name: ✅ الخلاصة
+        shell: bash
         run: |
+          set -euo pipefail
           echo "🔥 Genesis Forge AI أنهى العمل بنجاح"
-          echo "🔐 وصول كامل"
-          echo "🧪 تعديل اختباري بسيط تم تطبيقه"
-          echo "📦 Commit + PR يجب أن يكونا جاهزين (إذا وجدت تغييرات)"
-
